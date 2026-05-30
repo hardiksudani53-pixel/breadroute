@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parry Sound Bread Route</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .geo-locked { background-color: #fee2e2; border-color: #ef4444; color: #b91c1c; }
+        .geo-active { background-color: #dcfce7; border-color: #22c55e; color: #15803d; }
+        .btn-plus { background: #dcfce7; color: #15803d; border: 1px solid #22c55e; }
+        .btn-minus { background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans pb-10">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
+        <div class="bg-slate-900 p-8 text-white text-center rounded-b-[3rem] shadow-xl">
+            <h1 class="text-2xl font-black tracking-tighter italic">PARRY SOUND ROUTE</h1>
+            <p id="clock" class="text-xs font-mono opacity-50 mt-1"></p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Merchandiser</label>
+                <select id="worker" onchange="updateTarget()" class="w-full p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-lg font-bold outline-none">
+                    <option value="BB">BB (Sobeys)</option>
+                    <option value="Harshu">Harshu (Sobeys)</option>
+                    <option value="Deepak">Deepak (Walmart)</option>
+                </select>
+            </div>
+
+            <div id="geoBox" class="p-4 rounded-2xl border-2 text-center geo-locked transition-all">
+                <div id="geoStatus" class="font-black text-xs uppercase">Awaiting GPS...</div>
+                <div id="distText" class="text-[10px] opacity-70 mt-1">Calculating distance...</div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Old Dollys</p>
+                    <div class="flex items-center justify-between">
+                        <button onclick="changeVal('oldDolly', -0.25)" class="btn-minus w-10 h-10 rounded-xl font-bold">-</button>
+                        <span id="oldDolly" class="text-xl font-black">0.00</span>
+                        <button onclick="changeVal('oldDolly', 0.25)" class="btn-plus w-10 h-10 rounded-xl font-bold">+</button>
+                    </div>
+                </div>
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Fresh Dollys</p>
+                    <div class="flex items-center justify-between">
+                        <button onclick="changeVal('newDolly', -0.25)" class="btn-minus w-10 h-10 rounded-xl font-bold">-</button>
+                        <span id="newDolly" class="text-xl font-black">0.00</span>
+                        <button onclick="changeVal('newDolly', 0.25)" class="btn-plus w-10 h-10 rounded-xl font-bold">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="noteArea" class="hidden">
+                <textarea id="notes" placeholder="Any issues today? (Optional)" class="w-full p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm italic outline-none"></textarea>
+            </div>
+
+            <div class="bg-slate-900 rounded-[2.5rem] p-10 text-center shadow-inner">
+                <div id="display" class="text-6xl font-mono font-black text-white mb-8 tracking-tighter">00:00:00</div>
+                <button id="mainBtn" onclick="handleTimer()" disabled class="w-full bg-slate-700 text-white font-black py-6 rounded-3xl text-xl shadow-lg transition-all active:scale-95">
+                    LOCKED
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /******************************************************************
+         * SETTINGS: Paste your Google Web App Link between the quotes below
+         ******************************************************************/
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzXjh4iqviVP0gRN3XhlLNDm_oixhOMTIZMo0d-_CEb3Q_lqiKqN_Y-iByWXmEMjSMNg/exec"; 
+
+        let timer, start, isWorking = false;
+        let tLat = 45.3415, tLng = -80.0245; // Default Sobeys
