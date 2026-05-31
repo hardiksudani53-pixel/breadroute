@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manager Dash - Hours Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .active-drive { background-color: #3b82f6; border-color: #2563eb; color: white; }
+        .active-merch { background-color: #10b981; border-color: #059669; color: white; }
+        .paused-clock { color: #94a3b8 !important; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans pb-10">
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
+        <!-- Header -->
+        <div class="bg-slate-900 p-8 text-white text-center rounded-b-[3rem] shadow-xl">
+            <h1 class="text-2xl font-black tracking-tighter italic">MANAGER HOURS DASH</h1>
+            <p id="clock" class="text-xs font-mono opacity-50 mt-1"></p>
+        </div>
+
+        <div class="p-6 space-y-6">
+            <!-- DRIVING TIMER BOX -->
+            <div id="driveBox" class="p-6 rounded-2xl border-2 bg-slate-50 border-slate-200 transition-all text-center">
+                <div class="text-[10px] font-black uppercase tracking-widest opacity-60">Driving Time</div>
+                <div id="driveDisplay" class="text-4xl font-mono font-black my-2 text-slate-800">00:00:00</div>
+                <button id="driveBtn" onclick="startDriving()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-all text-sm">
+                    START DRIVING
+                </button>
+            </div>
+
+            <!-- MERCHANDISING TIMER BOX -->
+            <div id="merchBox" class="p-6 rounded-2xl border-2 bg-slate-50 border-slate-200 transition-all text-center">
+                <div class="text-[10px] font-black uppercase tracking-widest opacity-60">Merchandising Time</div>
+                <div id="merchDisplay" class="text-4xl font-mono font-black my-2 text-slate-800">00:00:00</div>
+                <button id="merchBtn" onclick="startMerch()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-all text-sm">
+                    START MERCHANDISING
+                </button>
+            </div>
+
+            <!-- Global Controls & Notes -->
+            <div class="space-y-4 pt-4 border-t border-slate-100">
+                <textarea id="notes" placeholder="Route notes, fuel, or store updates... (Optional)" class="w-full p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm italic outline-none"></textarea>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="pauseAllBtn" onclick="pauseAll()" disabled class="bg-yellow-500 text-white font-black py-4 rounded-xl text-sm opacity-50 cursor-not-allowed">PAUSE ALL</button>
+                    <button id="submitBtn" onclick="confirmSubmit()" disabled class="bg-red-600 text-white font-black py-4 rounded-xl text-sm opacity-50 cursor-not-allowed">FINISH & SUBMIT</button>
+                </div>
+                
+                <button onclick="confirmReset()" class="w-full bg-slate-200 text-slate-600 font-bold py-2 rounded-xl text-xs">RESET PAGE</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Uses the same Web App script link to feed into your spreadsheet system
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzXjh4iqviVP0gRN3XhlLNDm_oixhOMTIZMo0d-_CEb3Q_lqiKqN_Y-iByWXmEMjSMNg/exec"; 
+
+        let globalInterval;
+        let driveElapsed = 0, merchElapsed = 0;
+        let lastSegmentStart = null;
+        let currentMode = null; // 'driving', 'merch', or null
+
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
+
+        function updateDisplays() {
+            let d = driveElapsed, m = merchElapsed;
+            if (currentMode === 'driving') d += (new Date() - lastSegmentStart);
+            if (currentMode === 'merch') m += (new Date() - lastSegmentStart);
+
+            document.getElementById('driveDisplay').innerText = formatTime(d);
+            document.getElementById('merchDisplay').innerText = formatTime(m);
+        }
+
+        function formatTime(ms) {
+            let h = Math.floor(ms/3600000); let m = Math.floor((ms%3600000)/60000); let s = Math.floor((ms%60000)/1000);
+            return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+
+        function runClock() {
+            clearInterval(globalInterval);
+            globalInterval = setInterval(updateDisplays, 1000);
+            document.getElementById('pauseAllBtn').disabled = false;
+            document.getElementById('pauseAllBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('submitBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        function startDriving() {
+            if (currentMode === 'driving') return;
+            switchMode();
+            currentMode = 'driving';
+            lastSegmentStart = new Date();
+            
+            document.getElementById('driveBox').className = "p-6 rounded-2xl border-2 text-center active-drive shadow-lg";
+            document.getElementById('driveBtn').innerText = "ON THE ROAD";
+            document.getElementById('driveBtn').className = "w-full bg-white text-blue-600 font-black py-3 rounded-xl text-sm";
+            runClock();
+        }
+
+        function startMerch() {
+            if (currentMode === 'merch') return;
+            switchMode();
+            currentMode = 'merch';
+            lastSegmentStart = new Date();
+
+            document.getElementById('merchBox').className = "p-6 rounded-2xl border-2 text-center active-merch shadow-lg";
+            document.getElementById('merchBtn').innerText = "MERCHANDISING NOW";
+            document.getElementById('merchBtn').className = "w-full bg-white text-emerald-600 font-black py-3 rounded-xl text-sm";
+            runClock();
+        }
+
+        function switchMode() {
+            if (currentMode === 'driving') driveElapsed += (new Date() - lastSegmentStart);
+            if (currentMode === 'merch') merchElapsed += (new Date() - lastSegmentStart);
+            
+            // Reset box designs to plain state
+            document.getElementById('driveBox').className = "p-6 rounded-2xl border-2 bg-slate-50 border-slate-200 text-center";
+            document.getElementById('driveBtn').innerText = "SWITCH TO DRIVING";
+            document.getElementById('driveBtn').className = "w-full bg-blue-600 text-white font-bold py-3 rounded-xl text-sm";
+
+            document.getElementById('merchBox').className = "p-6 rounded-2xl border-2 bg-slate-50 border-slate-200 text-center";
+            document.getElementById('merchBtn').innerText = "SWITCH TO MERCH";
+            document.getElementById('merchBtn').className = "w-full bg-emerald-600 text-white font-bold py-3 rounded-xl text-sm";
+        }
+
+        function pauseAll() {
+            switchMode();
+            currentMode = null;
+            clearInterval(globalInterval);
+            updateDisplays();
+        }
+
+        function confirmReset() {
+            if(confirm("Wipe all tracking records? Progress will not be saved.")) { location.reload(); }
+        }
+
+        function confirmSubmit() {
+            pauseAll();
+            if(confirm("Submit your final driving & merch totals to the spreadsheet?")) { submitData(); }
+        }
+
+        function submitData() {
+            const payload = {
+                worker: "Manager (Tracked Hours)",
+                oldDolly: "0.00", // Required parameters by sheet layout
+                newDolly: "0.00",
+                duration: `Drive: ${document.getElementById('driveDisplay').innerText} | Merch: ${document.getElementById('merchDisplay').innerText}`,
+                notes: document.getElementById('notes').value,
+                date: new Date().toLocaleString()
+            };
+
+            const sBtn = document.getElementById('submitBtn');
+            sBtn.innerText = "SAVING..."; sBtn.disabled = true;
+
+            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
+            .then(() => { alert("Hours successfully saved!"); location.reload(); })
+            .catch(() => { alert("Error connecting."); sBtn.disabled = false; sBtn.innerText = "FINISH & SUBMIT"; });
+        }
+    </script>
+</body>
+</html>
