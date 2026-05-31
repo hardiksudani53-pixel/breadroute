@@ -14,30 +14,35 @@
 </head>
 <body class="bg-slate-100 font-sans pb-10">
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
-        <!-- Header -->
         <div class="bg-slate-900 p-8 text-white text-center rounded-b-[3rem] shadow-xl">
             <h1 class="text-2xl font-black tracking-tighter italic">PARRY SOUND ROUTE</h1>
             <p id="clock" class="text-xs font-mono opacity-50 mt-1"></p>
         </div>
 
         <div class="p-6 space-y-6">
-            <!-- Worker Selection -->
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Merchandiser</label>
-                <select id="worker" onchange="updateTarget()" class="w-full p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-lg font-bold outline-none">
-                    <option value="BB">BB (Sobeys)</option>
-                    <option value="Harshu">Harshu (Sobeys)</option>
-                    <option value="Deepak">Deepak (Walmart)</option>
-                </select>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Name</label>
+                    <select id="worker" class="w-full p-3 border-2 border-slate-100 rounded-xl bg-slate-50 text-sm font-bold outline-none">
+                        <option value="BB">BB</option>
+                        <option value="Harshu">Harshu</option>
+                        <option value="Deepak">Deepak</option>
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Store</label>
+                    <select id="store" onchange="updateTarget()" class="w-full p-3 border-2 border-slate-100 rounded-xl bg-slate-50 text-sm font-bold outline-none">
+                        <option value="Sobeys">Sobeys</option>
+                        <option value="Walmart">Walmart</option>
+                    </select>
+                </div>
             </div>
 
-            <!-- GPS Status Box -->
             <div id="geoBox" class="p-4 rounded-2xl border-2 text-center geo-locked transition-all">
                 <div id="geoStatus" class="font-black text-xs uppercase">Awaiting GPS...</div>
                 <div id="distText" class="text-[10px] opacity-70 mt-1">Calculating distance...</div>
             </div>
 
-            <!-- Dolly Counters -->
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
                     <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Old Dollys</p>
@@ -57,12 +62,10 @@
                 </div>
             </div>
 
-            <!-- Shift Notes -->
             <div id="noteArea" class="hidden">
                 <textarea id="notes" placeholder="Any issues today? (Optional)" class="w-full p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm italic outline-none"></textarea>
             </div>
 
-            <!-- Timer & Action Button -->
             <div class="bg-slate-900 rounded-[2.5rem] p-10 text-center shadow-inner">
                 <div id="display" class="text-6xl font-mono font-black text-white mb-8 tracking-tighter">00:00:00</div>
                 <button id="mainBtn" onclick="handleTimer()" disabled class="w-full bg-slate-700 text-white font-black py-6 rounded-3xl text-xl shadow-lg transition-all active:scale-95">
@@ -73,42 +76,38 @@
     </div>
 
     <script>
-        /******************************************************************
-         * SETTINGS: Your Google Web App link is safely integrated below
-         ******************************************************************/
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzXjh4iqviVP0gRN3XhlLNDm_oixhOMTIZMo0d-_CEb3Q_lqiKqN_Y-iByWXmEMjSMNg/exec"; 
 
         let timer, start, isWorking = false;
         let tLat = 45.3415, tLng = -80.0245; // Default Sobeys
         let graceTimer = null;
 
-        // Update clock every second
         setInterval(() => { 
             document.getElementById('clock').innerText = new Date().toLocaleTimeString(); 
         }, 1000);
 
-        // Update target store based on worker selection
         function updateTarget() {
-            const w = document.getElementById('worker').value;
-            tLat = (w === 'Deepak') ? 45.3365 : 45.3415;
-            tLng = (w === 'Deepak') ? -80.0175 : -80.0245;
+            const store = document.getElementById('store').value;
+            if (store === 'Walmart') {
+                tLat = 45.3365; tLng = -80.0175;
+            } else {
+                tLat = 45.3415; tLng = -80.0245;
+            }
         }
 
-        // Change Dolly values
         function changeVal(id, amt) {
             let el = document.getElementById(id);
             let val = Math.max(0, parseFloat(el.innerText) + amt);
             el.innerText = val.toFixed(2);
         }
 
-        // GPS Tracker
         navigator.geolocation.watchPosition(pos => {
             const d = calculateDistance(pos.coords.latitude, pos.coords.longitude, tLat, tLng);
             const box = document.getElementById('geoBox');
             const btn = document.getElementById('mainBtn');
-            document.getElementById('distText').innerText = `${Math.round(d)}m from target`;
+            document.getElementById('distText').innerText = `${Math.round(d)}m from ${document.getElementById('store').value}`;
 
-            if (d <= 60) { // 60 meter range
+            if (d <= 75) { // Widened slightly to 75m for better reliability
                 clearTimeout(graceTimer);
                 graceTimer = null;
                 box.className = "p-4 rounded-2xl border-2 text-center geo-active";
@@ -120,7 +119,7 @@
                 }
             } else {
                 if (isWorking && !graceTimer) {
-                    graceTimer = setTimeout(() => { alert("Warning: You are away from the store site."); }, 180000);
+                    graceTimer = setTimeout(() => { alert("Warning: Away from store."); }, 180000);
                 }
                 if (!isWorking) {
                     box.className = "p-4 rounded-2xl border-2 text-center geo-locked";
@@ -132,7 +131,6 @@
             }
         }, err => console.log(err), { enableHighAccuracy: true });
 
-        // Calculate distance between points
         function calculateDistance(l1, n1, l2, n2) {
             const R = 6371e3;
             const dL = (l2-l1)*Math.PI/180;
@@ -141,17 +139,15 @@
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
-        // Handle the Button Click
         function handleTimer() {
             if(!isWorking) {
-                // START
                 isWorking = true;
                 start = new Date();
                 document.getElementById('worker').disabled = true;
+                document.getElementById('store').disabled = true;
                 document.getElementById('noteArea').classList.remove('hidden');
                 document.getElementById('mainBtn').innerText = "FINISH SHIFT";
                 document.getElementById('mainBtn').className = "w-full bg-red-600 text-white font-black py-6 rounded-3xl text-xl shadow-lg";
-                
                 timer = setInterval(() => {
                     let diff = new Date() - start;
                     let h = Math.floor(diff/3600000);
@@ -161,17 +157,13 @@
                         `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
                 }, 1000);
             } else {
-                // FINISH
-                if(confirm("Submit shift data to spreadsheet?")) {
-                    submit();
-                }
+                if(confirm("Submit shift data?")) { submit(); }
             }
         }
 
-        // Send data to Google Sheets
         function submit() {
             const payload = {
-                worker: document.getElementById('worker').value,
+                worker: document.getElementById('worker').value + " (" + document.getElementById('store').value + ")",
                 oldDolly: document.getElementById('oldDolly').innerText,
                 newDolly: document.getElementById('newDolly').innerText,
                 duration: document.getElementById('display').innerText,
@@ -193,7 +185,7 @@
                 location.reload();
             })
             .catch(err => {
-                alert("Error sending data. Check internet.");
+                alert("Error. Check connection.");
                 btn.disabled = false;
                 btn.innerText = "FINISH SHIFT";
             });
