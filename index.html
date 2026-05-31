@@ -10,6 +10,7 @@
         .geo-active { background-color: #dcfce7; border-color: #22c55e; color: #15803d; }
         .btn-plus { background: #dcfce7; color: #15803d; border: 1px solid #22c55e; }
         .btn-minus { background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; }
+        .paused-clock { color: #f59e0b !important; } /* Orange clock for pause */
     </style>
 </head>
 <body class="bg-slate-100 font-sans pb-10">
@@ -40,37 +41,41 @@
 
             <div id="geoBox" class="p-4 rounded-2xl border-2 text-center geo-locked transition-all">
                 <div id="geoStatus" class="font-black text-xs uppercase">Awaiting GPS...</div>
-                <div id="distText" class="text-[10px] opacity-70 mt-1">Calculating distance...</div>
+                <div id="distText" class="text-[10px] opacity-70 mt-1">Calculating...</div>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
                     <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Old Dollys</p>
                     <div class="flex items-center justify-between">
-                        <button onclick="changeVal('oldDolly', -0.25)" class="btn-minus w-10 h-10 rounded-xl font-bold">-</button>
-                        <span id="oldDolly" class="text-xl font-black">0.00</span>
-                        <button onclick="changeVal('oldDolly', 0.25)" class="btn-plus w-10 h-10 rounded-xl font-bold">+</button>
+                        <button onclick="changeVal('oldDolly', -0.25)" class="btn-minus w-8 h-8 rounded-lg font-bold">-</button>
+                        <span id="oldDolly" class="text-lg font-black">0.00</span>
+                        <button onclick="changeVal('oldDolly', 0.25)" class="btn-plus w-8 h-8 rounded-lg font-bold">+</button>
                     </div>
                 </div>
                 <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
                     <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Fresh Dollys</p>
                     <div class="flex items-center justify-between">
-                        <button onclick="changeVal('newDolly', -0.25)" class="btn-minus w-10 h-10 rounded-xl font-bold">-</button>
-                        <span id="newDolly" class="text-xl font-black">0.00</span>
-                        <button onclick="changeVal('newDolly', 0.25)" class="btn-plus w-10 h-10 rounded-xl font-bold">+</button>
+                        <button onclick="changeVal('newDolly', -0.25)" class="btn-minus w-8 h-8 rounded-lg font-bold">-</button>
+                        <span id="newDolly" class="text-lg font-black">0.00</span>
+                        <button onclick="changeVal('newDolly', 0.25)" class="btn-plus w-8 h-8 rounded-lg font-bold">+</button>
                     </div>
                 </div>
             </div>
 
-            <div id="noteArea" class="hidden">
-                <textarea id="notes" placeholder="Any issues today? (Optional)" class="w-full p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm italic outline-none"></textarea>
-            </div>
+            <div id="noteArea" class="hidden"><textarea id="notes" placeholder="Notes (Optional)" class="w-full p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm italic outline-none"></textarea></div>
 
-            <div class="bg-slate-900 rounded-[2.5rem] p-10 text-center shadow-inner">
-                <div id="display" class="text-6xl font-mono font-black text-white mb-8 tracking-tighter">00:00:00</div>
-                <button id="mainBtn" onclick="handleTimer()" disabled class="w-full bg-slate-700 text-white font-black py-6 rounded-3xl text-xl shadow-lg transition-all active:scale-95">
-                    LOCKED
-                </button>
+            <div class="bg-slate-900 rounded-[2.5rem] p-8 text-center shadow-inner">
+                <div id="display" class="text-6xl font-mono font-black text-white mb-6 tracking-tighter transition-all">00:00:00</div>
+                
+                <div class="flex flex-col gap-3">
+                    <button id="mainBtn" onclick="handleTimer()" disabled class="w-full bg-slate-700 text-white font-black py-5 rounded-2xl text-xl transition-all">LOCKED</button>
+                    
+                    <div id="extraBtns" class="hidden grid grid-cols-2 gap-3">
+                        <button id="pauseBtn" onclick="togglePause()" class="bg-yellow-500 text-white font-black py-3 rounded-xl text-sm">PAUSE</button>
+                        <button onclick="confirmReset()" class="bg-slate-600 text-white font-black py-3 rounded-xl text-sm">LOG OUT / RESET</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -78,21 +83,15 @@
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzXjh4iqviVP0gRN3XhlLNDm_oixhOMTIZMo0d-_CEb3Q_lqiKqN_Y-iByWXmEMjSMNg/exec"; 
 
-        let timer, start, isWorking = false;
-        let tLat = 45.3415, tLng = -80.0245; // Default Sobeys
-        let graceTimer = null;
+        let timer, startTime, elapsedWhenPaused = 0, isWorking = false, isPaused = false;
+        let tLat = 45.3415, tLng = -80.0245;
 
-        setInterval(() => { 
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString(); 
-        }, 1000);
+        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
 
         function updateTarget() {
-            const store = document.getElementById('store').value;
-            if (store === 'Walmart') {
-                tLat = 45.3365; tLng = -80.0175;
-            } else {
-                tLat = 45.3415; tLng = -80.0245;
-            }
+            const s = document.getElementById('store').value;
+            tLat = (s === 'Walmart') ? 45.3365 : 45.3415;
+            tLng = (s === 'Walmart') ? -80.0175 : -80.0245;
         }
 
         function changeVal(id, amt) {
@@ -106,59 +105,66 @@
             const box = document.getElementById('geoBox');
             const btn = document.getElementById('mainBtn');
             document.getElementById('distText').innerText = `${Math.round(d)}m from ${document.getElementById('store').value}`;
-
-            if (d <= 75) { // Widened slightly to 75m for better reliability
-                clearTimeout(graceTimer);
-                graceTimer = null;
+            
+            if (d <= 75) {
                 box.className = "p-4 rounded-2xl border-2 text-center geo-active";
                 document.getElementById('geoStatus').innerText = "✓ On Site";
                 btn.disabled = false;
-                if(!isWorking) {
-                    btn.innerText = "START SHIFT";
-                    btn.className = "w-full bg-green-500 text-white font-black py-6 rounded-3xl text-xl shadow-lg";
-                }
+                if(!isWorking) { btn.innerText = "START SHIFT"; btn.className = "w-full bg-green-500 text-white font-black py-5 rounded-2xl text-xl"; }
             } else {
-                if (isWorking && !graceTimer) {
-                    graceTimer = setTimeout(() => { alert("Warning: Away from store."); }, 180000);
-                }
-                if (!isWorking) {
+                if(!isWorking) {
                     box.className = "p-4 rounded-2xl border-2 text-center geo-locked";
                     document.getElementById('geoStatus').innerText = "✖ Location Required";
-                    btn.disabled = true;
-                    btn.innerText = "LOCKED";
-                    btn.className = "w-full bg-slate-200 text-slate-400 font-black py-6 rounded-3xl text-xl";
+                    btn.disabled = true; btn.innerText = "LOCKED"; btn.className = "w-full bg-slate-200 text-slate-400 py-5 rounded-2xl text-xl";
                 }
             }
-        }, err => console.log(err), { enableHighAccuracy: true });
+        }, null, { enableHighAccuracy: true });
 
         function calculateDistance(l1, n1, l2, n2) {
             const R = 6371e3;
-            const dL = (l2-l1)*Math.PI/180;
-            const dN = (n2-n1)*Math.PI/180;
+            const dL = (l2-l1)*Math.PI/180; const dN = (n2-n1)*Math.PI/180;
             const a = Math.sin(dL/2)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin(dN/2)**2;
             return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
         }
 
         function handleTimer() {
             if(!isWorking) {
-                isWorking = true;
-                start = new Date();
-                document.getElementById('worker').disabled = true;
-                document.getElementById('store').disabled = true;
+                isWorking = true; startTime = new Date();
+                document.getElementById('worker').disabled = true; document.getElementById('store').disabled = true;
                 document.getElementById('noteArea').classList.remove('hidden');
-                document.getElementById('mainBtn').innerText = "FINISH SHIFT";
-                document.getElementById('mainBtn').className = "w-full bg-red-600 text-white font-black py-6 rounded-3xl text-xl shadow-lg";
-                timer = setInterval(() => {
-                    let diff = new Date() - start;
-                    let h = Math.floor(diff/3600000);
-                    let m = Math.floor((diff%3600000)/60000);
-                    let s = Math.floor((diff%60000)/1000);
-                    document.getElementById('display').innerText = 
-                        `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-                }, 1000);
+                document.getElementById('extraBtns').classList.remove('hidden');
+                document.getElementById('mainBtn').innerText = "FINISH & SUBMIT";
+                document.getElementById('mainBtn').className = "w-full bg-red-600 text-white font-black py-5 rounded-2xl text-xl shadow-lg";
+                startClock();
+            } else { if(confirm("Submit shift to Google Sheets?")) submit(); }
+        }
+
+        function startClock() {
+            timer = setInterval(() => {
+                let diff = (new Date() - startTime) + elapsedWhenPaused;
+                let h = Math.floor(diff/3600000); let m = Math.floor((diff%3600000)/60000); let s = Math.floor((diff%60000)/1000);
+                document.getElementById('display').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            }, 1000);
+        }
+
+        function togglePause() {
+            if(!isPaused) {
+                isPaused = true; clearInterval(timer);
+                elapsedWhenPaused += (new Date() - startTime);
+                document.getElementById('pauseBtn').innerText = "RESUME";
+                document.getElementById('pauseBtn').className = "bg-green-600 text-white font-black py-3 rounded-xl text-sm";
+                document.getElementById('display').classList.add('paused-clock');
             } else {
-                if(confirm("Submit shift data?")) { submit(); }
+                isPaused = false; startTime = new Date();
+                document.getElementById('pauseBtn').innerText = "PAUSE";
+                document.getElementById('pauseBtn').className = "bg-yellow-500 text-white font-black py-3 rounded-xl text-sm";
+                document.getElementById('display').classList.remove('paused-clock');
+                startClock();
             }
+        }
+
+        function confirmReset() {
+            if(confirm("Log Out? This will clear the timer and NOT save any data to the sheet.")) { location.reload(); }
         }
 
         function submit() {
@@ -170,25 +176,9 @@
                 notes: document.getElementById('notes').value,
                 date: new Date().toLocaleString()
             };
-
-            const btn = document.getElementById('mainBtn');
-            btn.innerText = "UPLOADING...";
-            btn.disabled = true;
-
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(payload)
-            })
-            .then(() => {
-                alert("Success! Shift saved.");
-                location.reload();
-            })
-            .catch(err => {
-                alert("Error. Check connection.");
-                btn.disabled = false;
-                btn.innerText = "FINISH SHIFT";
-            });
+            document.getElementById('mainBtn').innerText = "UPLOADING..."; document.getElementById('mainBtn').disabled = true;
+            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
+            .then(() => { alert("Success!"); location.reload(); });
         }
     </script>
 </body>
