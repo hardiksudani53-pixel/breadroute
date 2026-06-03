@@ -1,185 +1,184 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parry Sound Bread Route</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .geo-locked { background-color: #fee2e2; border-color: #ef4444; color: #b91c1c; }
-        .geo-active { background-color: #dcfce7; border-color: #22c55e; color: #15803d; }
-        .btn-plus { background: #dcfce7; color: #15803d; border: 1px solid #22c55e; }
-        .btn-minus { background: #fee2e2; color: #b91c1c; border: 1px solid #ef4444; }
-        .paused-clock { color: #f59e0b !important; } /* Orange clock for pause */
-    </style>
-</head>
-<body class="bg-slate-100 font-sans pb-10">
-    <div class="max-w-md mx-auto bg-white min-h-screen shadow-2xl">
-        <div class="bg-slate-900 p-8 text-white text-center rounded-b-[3rem] shadow-xl">
-            <h1 class="text-2xl font-black tracking-tighter italic">PARRY SOUND ROUTE</h1>
-            <p id="clock" class="text-xs font-mono opacity-50 mt-1"></p>
-        </div>
+// --- 1. GEOLOCATION & TARGET SETUP ---
+let tLat = 45.34379956415204;
+let tLng = -80.00785070506414;
+const ALLOWED_RADIUS = 300; 
 
-        <div class="p-6 space-y-6">
-            <div class="grid grid-cols-2 gap-3">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Name</label>
-                    <select id="worker" class="w-full p-3 border-2 border-slate-100 rounded-xl bg-slate-50 text-sm font-bold outline-none">
-                        <option value="BB">BB</option>
-                        <option value="Harshu">Harshu</option>
-                        <option value="Deepak">Deepak</option>
-                    </select>
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Store</label>
-                    <select id="store" onchange="updateTarget()" class="w-full p-3 border-2 border-slate-100 rounded-xl bg-slate-50 text-sm font-bold outline-none">
-                        <option value="Sobeys">Sobeys</option>
-                        <option value="Walmart">Walmart</option>
-                    </select>
-                </div>
-            </div>
+function updateTarget() {
+    const s = document.getElementById('store').value;
+    tLat = (s === 'Walmart') ? 45.34725026580236 : 45.34379956415204;
+    tLng = (s === 'Walmart') ? -80.01192826729029 : -80.00785070506414;
+    
+    checkLocation();    // Re-verify GPS distance
+    fetchPastHistory(); // Dynamically look up yesterday's stock number!
+}
 
-            <div id="geoBox" class="p-4 rounded-2xl border-2 text-center geo-locked transition-all">
-                <div id="geoStatus" class="font-black text-xs uppercase">Awaiting GPS...</div>
-                <div id="distText" class="text-[10px] opacity-70 mt-1">Calculating...</div>
-            </div>
+// Auto-fetches the previous day's fresh inventory to pre-fill the Old Dolly input field
+function fetchPastHistory() {
+    const worker = document.getElementById('worker').value;
+    const store = document.getElementById('store').value;
+    const oldDollyInput = document.getElementById('oldDolly');
+    
+    if (!worker || !store) return; // Wait until they've selected both dropdowns
+    
+    oldDollyInput.placeholder = "Loading last count...";
+    oldDollyInput.disabled = true;
 
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Old Dollys</p>
-                    <div class="flex items-center justify-between">
-                        <button onclick="changeVal('oldDolly', -0.25)" class="btn-minus w-8 h-8 rounded-lg font-bold">-</button>
-                        <span id="oldDolly" class="text-lg font-black">0.00</span>
-                        <button onclick="changeVal('oldDolly', 0.25)" class="btn-plus w-8 h-8 rounded-lg font-bold">+</button>
-                    </div>
-                </div>
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Fresh Dollys</p>
-                    <div class="flex items-center justify-between">
-                        <button onclick="changeVal('newDolly', -0.25)" class="btn-minus w-8 h-8 rounded-lg font-bold">-</button>
-                        <span id="newDolly" class="text-lg font-black">0.00</span>
-                        <button onclick="changeVal('newDolly', 0.25)" class="btn-plus w-8 h-8 rounded-lg font-bold">+</button>
-                    </div>
-                </div>
-            </div>
+    // Send a fetch payload to your Google Web App backend
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/plain' }, 
+        body: JSON.stringify({
+            action: "fetchLastCount",
+            worker: worker,
+            store: store
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        oldDollyInput.value = data.lastCount; // Drop the count right into the input box!
+        oldDollyInput.disabled = false;
+    })
+    .catch(err => {
+        console.log("History lookup failed, defaulting to manual entry: ", err);
+        oldDollyInput.placeholder = "Enter Old Dolly";
+        oldDollyInput.disabled = false;
+    });
+}
 
-            <div id="noteArea" class="hidden"><textarea id="notes" placeholder="Notes (Optional)" class="w-full p-4 border-2 border-slate-100 rounded-2xl bg-slate-50 text-sm italic outline-none"></textarea></div>
+// Hook history lookup up to your worker name dropdown too
+document.getElementById('worker').addEventListener('change', fetchPastHistory);
 
-            <div class="bg-slate-900 rounded-[2.5rem] p-8 text-center shadow-inner">
-                <div id="display" class="text-6xl font-mono font-black text-white mb-6 tracking-tighter transition-all">00:00:00</div>
-                
-                <div class="flex flex-col gap-3">
-                    <button id="mainBtn" onclick="handleTimer()" disabled class="w-full bg-slate-700 text-white font-black py-5 rounded-2xl text-xl transition-all">LOCKED</button>
-                    
-                    <div id="extraBtns" class="hidden grid grid-cols-2 gap-3">
-                        <button id="pauseBtn" onclick="togglePause()" class="bg-yellow-500 text-white font-black py-3 rounded-xl text-sm">PAUSE</button>
-                        <button onclick="confirmReset()" class="bg-slate-600 text-white font-black py-3 rounded-xl text-sm">LOG OUT / RESET</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; 
+    const phi1 = lat1 * Math.PI / 180;
+    const phi2 = lat2 * Math.PI / 180;
+    const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+              Math.cos(phi1) * Math.cos(phi2) *
+              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
 
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzXjh4iqviVP0gRN3XhlLNDm_oixhOMTIZMo0d-_CEb3Q_lqiKqN_Y-iByWXmEMjSMNg/exec"; 
-
-        let timer, startTime, elapsedWhenPaused = 0, isWorking = false, isPaused = false;
-        let tLat = 45.3415, tLng = -80.0245;
-
-        setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString(); }, 1000);
-
-        function updateTarget() {
-            const s = document.getElementById('store').value;
-            tLat = (s === 'Walmart') ? 45.3365 : 45.3415;
-            tLng = (s === 'Walmart') ? -80.0175 : -80.0245;
+function checkLocation() {
+    if (!navigator.geolocation) {
+        document.getElementById('status').innerText = "GPS not supported by your browser.";
+        return;
+    }
+    
+    navigator.geolocation.getCurrentPosition(position => {
+        const uLat = position.coords.latitude;
+        const uLng = position.coords.longitude;
+        const dist = getDistance(uLat, uLng, tLat, tLng);
+        
+        const statusEl = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        
+        if (dist <= ALLOWED_RADIUS) {
+            statusEl.innerText = "Location verified: You are on-site.";
+            statusEl.style.color = "green";
+            startBtn.disabled = false;
+        } else {
+            statusEl.innerText = `Access Denied: You are ${Math.round(dist)}m away from the store.`;
+            statusEl.style.color = "red";
+            startBtn.disabled = true;
         }
+    }, error => {
+        document.getElementById('status').innerText = "Error getting GPS location. Please allow location access.";
+        document.getElementById('status').style.color = "red";
+    }, { enableHighAccuracy: true });
+}
 
-        function changeVal(id, amt) {
-            let el = document.getElementById(id);
-            let val = Math.max(0, parseFloat(el.innerText) + amt);
-            el.innerText = val.toFixed(2);
-        }
+// --- 2. TIMER & TRACKING SYSTEM ---
+let startTime, timerInterval;
+let isTracking = false;
 
-        navigator.geolocation.watchPosition(pos => {
-            const d = calculateDistance(pos.coords.latitude, pos.coords.longitude, tLat, tLng);
-            const box = document.getElementById('geoBox');
-            const btn = document.getElementById('mainBtn');
-            document.getElementById('distText').innerText = `${Math.round(d)}m from ${document.getElementById('store').value}`;
-            
-            if (d <= 75) {
-                box.className = "p-4 rounded-2xl border-2 text-center geo-active";
-                document.getElementById('geoStatus').innerText = "✓ On Site";
-                btn.disabled = false;
-                if(!isWorking) { btn.innerText = "START SHIFT"; btn.className = "w-full bg-green-500 text-white font-black py-5 rounded-2xl text-xl"; }
-            } else {
-                if(!isWorking) {
-                    box.className = "p-4 rounded-2xl border-2 text-center geo-locked";
-                    document.getElementById('geoStatus').innerText = "✖ Location Required";
-                    btn.disabled = true; btn.innerText = "LOCKED"; btn.className = "w-full bg-slate-200 text-slate-400 py-5 rounded-2xl text-xl";
-                }
-            }
-        }, null, { enableHighAccuracy: true });
+function toggleTracking() {
+    const startBtn = document.getElementById('startBtn');
+    const storeSel = document.getElementById('store');
+    const workerSel = document.getElementById('worker');
+    
+    if (!isTracking) {
+        isTracking = true;
+        startTime = new Date();
+        startBtn.innerText = "STOP TRACKING";
+        startBtn.style.backgroundColor = "#d9534f"; 
+        storeSel.disabled = true;
+        workerSel.disabled = true;
+        
+        timerInterval = setInterval(updateTimerDisplay, 1000);
+    } else {
+        clearInterval(timerInterval);
+        submitData();
+    }
+}
 
-        function calculateDistance(l1, n1, l2, n2) {
-            const R = 6371e3;
-            const dL = (l2-l1)*Math.PI/180; const dN = (n2-n1)*Math.PI/180;
-            const a = Math.sin(dL/2)**2 + Math.cos(l1*Math.PI/180)*Math.cos(l2*Math.PI/180)*Math.sin(dN/2)**2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
+function updateTimerDisplay() {
+    const now = new Date();
+    const diff = now - startTime;
+    const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
+    const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+    const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+    document.getElementById('timer').innerText = `${hrs}:${mins}:${secs}`;
+}
 
-        function handleTimer() {
-            if(!isWorking) {
-                isWorking = true; startTime = new Date();
-                document.getElementById('worker').disabled = true; document.getElementById('store').disabled = true;
-                document.getElementById('noteArea').classList.remove('hidden');
-                document.getElementById('extraBtns').classList.remove('hidden');
-                document.getElementById('mainBtn').innerText = "FINISH & SUBMIT";
-                document.getElementById('mainBtn').className = "w-full bg-red-600 text-white font-black py-5 rounded-2xl text-xl shadow-lg";
-                startClock();
-            } else { if(confirm("Submit shift to Google Sheets?")) submit(); }
-        }
+// --- 3. DATA SUBMISSION TO GOOGLE SHEETS ---
+function submitData() {
+    const startBtn = document.getElementById('startBtn');
+    startBtn.innerText = "Submitting...";
+    startBtn.disabled = true;
 
-        function startClock() {
-            timer = setInterval(() => {
-                let diff = (new Date() - startTime) + elapsedWhenPaused;
-                let h = Math.floor(diff/3600000); let m = Math.floor((diff%3600000)/60000); let s = Math.floor((diff%60000)/1000);
-                document.getElementById('display').innerText = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-            }, 1000);
-        }
+    const endTime = new Date();
+    const diff = endTime - startTime;
+    const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
+    const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+    const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+    const durationStr = `${hrs}:${mins}:${secs}`;
 
-        function togglePause() {
-            if(!isPaused) {
-                isPaused = true; clearInterval(timer);
-                elapsedWhenPaused += (new Date() - startTime);
-                document.getElementById('pauseBtn').innerText = "RESUME";
-                document.getElementById('pauseBtn').className = "bg-green-600 text-white font-black py-3 rounded-xl text-sm";
-                document.getElementById('display').classList.add('paused-clock');
-            } else {
-                isPaused = false; startTime = new Date();
-                document.getElementById('pauseBtn').innerText = "PAUSE";
-                document.getElementById('pauseBtn').className = "bg-yellow-500 text-white font-black py-3 rounded-xl text-sm";
-                document.getElementById('display').classList.remove('paused-clock');
-                startClock();
-            }
-        }
+    const payload = {
+        action: "submitData",
+        sheetType: "employee", // Forces this web app to ONLY submit to the Employee log tab
+        date: startTime.toLocaleString(),
+        worker: document.getElementById('worker').value,
+        oldDolly: document.getElementById('oldDolly').value || 0,
+        newDolly: document.getElementById('newDolly').value || 0,
+        duration: durationStr,
+        notes: `Store: ${document.getElementById('store').value}. ${document.getElementById('notes').value}`
+    };
 
-        function confirmReset() {
-            if(confirm("Log Out? This will clear the timer and NOT save any data to the sheet.")) { location.reload(); }
-        }
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(() => {
+        alert("Data successfully sent to your Google Sheet!");
+        resetForm();
+    })
+    .catch(err => {
+        alert("Error sending data: " + err);
+        resetForm();
+    });
+}
 
-        function submit() {
-            const payload = {
-                worker: document.getElementById('worker').value + " (" + document.getElementById('store').value + ")",
-                oldDolly: document.getElementById('oldDolly').innerText,
-                newDolly: document.getElementById('newDolly').innerText,
-                duration: document.getElementById('display').innerText,
-                notes: document.getElementById('notes').value,
-                date: new Date().toLocaleString()
-            };
-            document.getElementById('mainBtn').innerText = "UPLOADING..."; document.getElementById('mainBtn').disabled = true;
-            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
-            .then(() => { alert("Success!"); location.reload(); });
-        }
-    </script>
-</body>
-</html>
+function resetForm() {
+    clearInterval(timerInterval);
+    isTracking = false;
+    
+    const startBtn = document.getElementById('startBtn');
+    startBtn.innerText = "START TRACKING";
+    startBtn.style.backgroundColor = "#5cb85c"; 
+    
+    document.getElementById('store').disabled = false;
+    document.getElementById('worker').disabled = false;
+    document.getElementById('timer').innerText = "00:00:00";
+    document.getElementById('oldDolly').value = "";
+    document.getElementById('newDolly').value = "";
+    document.getElementById('notes').value = "";
+    
+    checkLocation();
+}
+
+window.onload = checkLocation;
