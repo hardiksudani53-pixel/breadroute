@@ -1,238 +1,406 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bread Tracker</title>
-    <style>
-        /* Apple-Inspired iOS Design */
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #000; /* Black background like Apple apps */
-            color: #fff; 
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-        }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Bread Tracker"/>
+<meta name="theme-color" content="#000000"/>
+<title>Bread Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #000;
+  --card: #1c1c1e;
+  --card2: #2c2c2e;
+  --card3: #3a3a3c;
+  --border: #38383a;
+  --text: #fff;
+  --muted: #8e8e93;
+  --blue: #0a84ff;
+  --green: #32d74b;
+  --red: #ff453a;
+  --orange: #ff9f0a;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; background: var(--bg); color: var(--text); font-family: 'DM Sans', -apple-system, sans-serif; }
+body { padding: calc(var(--safe-top) + 16px) 16px calc(var(--safe-bottom) + 24px); }
 
-        .ios-card { 
-            width: 100%;
-            max-width: 375px; 
-            padding: 20px; 
-            background: #1c1c1e; /* Dark grey Apple card */
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
+.app-header { text-align: center; margin-bottom: 24px; padding-top: 4px; }
+.app-icon { font-size: 40px; line-height: 1; margin-bottom: 6px; }
+.app-title { font-size: 28px; font-weight: 700; letter-spacing: -.5px; }
+.app-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
 
-        h2 { font-size: 24px; font-weight: 600; margin-bottom: 20px; text-align: center; color: #fff; }
+.geo-bar {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border-radius: 14px;
+  padding: 13px 16px; margin-bottom: 20px;
+  border: 1px solid var(--border); transition: border-color .3s;
+}
+.geo-bar.ok  { border-color: var(--green); }
+.geo-bar.bad { border-color: var(--red); }
+.geo-bar.checking { border-color: var(--orange); }
+.geo-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: var(--muted); transition: background .3s; }
+.geo-bar.ok  .geo-dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.geo-bar.bad .geo-dot { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.geo-bar.checking .geo-dot { background: var(--orange); animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.geo-text { font-size: 14px; font-weight: 500; flex: 1; }
+.geo-dist { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
 
-        label { 
-            display: block; 
-            font-size: 13px; 
-            text-transform: uppercase; 
-            color: #8e8e93; 
-            margin: 15px 0 5px 10px; 
-            font-weight: 500;
-        }
+.field-group { margin-bottom: 20px; }
+.field-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .8px; color: var(--muted); margin-bottom: 7px; padding-left: 4px;
+}
 
-        /* The Dropdowns - iOS will automatically use the "Scroll Wheel" for these */
-        select, textarea { 
-            width: 100%; 
-            padding: 15px; 
-            border-radius: 12px; 
-            border: none; 
-            font-size: 17px; 
-            background-color: #2c2c2e; 
-            color: #0a84ff; /* Apple Blue Text */
-            -webkit-appearance: none; /* Removes default arrow to look cleaner */
-            appearance: none;
-            box-sizing: border-box;
-        }
+.seg-ctrl {
+  display: flex; background: var(--card2); border-radius: 12px;
+  padding: 3px; gap: 3px;
+}
+.seg-btn {
+  flex: 1; padding: 9px 4px; font-size: 14px; font-weight: 500;
+  border: none; background: transparent; color: var(--muted);
+  border-radius: 9px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .2s; white-space: nowrap;
+}
+.seg-btn.on { background: var(--card3); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 
-        #status { 
-            font-size: 14px; 
-            margin-bottom: 20px; 
-            padding: 12px; 
-            border-radius: 10px; 
-            background: #2c2c2e; 
-            text-align: center;
-            font-weight: 500;
-        }
+.dolly-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dolly-box {
+  background: var(--card); border-radius: 14px;
+  padding: 14px; border: 1px solid var(--border);
+}
+.dolly-box-label { font-size: 11px; color: var(--muted); font-weight: 500; margin-bottom: 10px; text-align: center; }
+.dolly-stepper { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.dstep-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: none; background: var(--card2);
+  color: var(--text); font-size: 20px; font-weight: 300;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-family: 'DM Sans', sans-serif; transition: background .15s; flex-shrink: 0;
+}
+.dstep-btn:active { background: var(--card3); transform: scale(.93); }
+.dstep-val { font-size: 22px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--blue); text-align: center; flex: 1; }
+.dolly-sub { font-size: 10px; color: var(--muted); text-align: center; margin-top: 5px; }
 
-        #timer { 
-            font-size: 48px; 
-            font-weight: 200; 
-            margin: 25px 0; 
-            text-align: center;
-            font-variant-numeric: tabular-nums;
-        }
+.total-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border-radius: 12px;
+  padding: 12px 16px; margin-top: 10px; border: 1px solid var(--border);
+}
+.total-lbl { font-size: 13px; color: var(--muted); font-weight: 500; }
+.total-val { font-size: 18px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--orange); }
+.sold-val { font-size: 13px; color: var(--green); font-weight: 500; font-family: 'DM Mono', monospace; }
 
-        /* Apple Blue Action Button */
-        #startBtn { 
-            width: 100%; 
-            padding: 18px; 
-            font-size: 18px; 
-            font-weight: 600; 
-            border: none; 
-            border-radius: 14px; 
-            cursor: pointer; 
-            color: white; 
-            background-color: #007aff; /* Classic iOS Blue */
-            transition: all 0.2s ease;
-        }
+.timer-card {
+  background: var(--card); border-radius: 20px;
+  padding: 24px 16px 20px; text-align: center;
+  border: 1px solid var(--border); margin-bottom: 20px;
+  transition: border-color .3s;
+}
+.timer-card.running { border-color: var(--green); }
+.timer-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 10px; }
+.timer-display {
+  font-size: 56px; font-weight: 200; letter-spacing: 2px;
+  font-family: 'DM Mono', monospace; color: var(--text);
+  font-variant-numeric: tabular-nums; line-height: 1; transition: color .3s;
+}
+.timer-card.running .timer-display { color: var(--green); }
+.timer-start-info { font-size: 11px; color: var(--muted); margin-top: 8px; min-height: 16px; }
 
-        #startBtn:active { transform: scale(0.98); opacity: 0.8; }
-        #startBtn:disabled { background-color: #3a3a3c; color: #8e8e93; cursor: not-allowed; }
+.main-btn {
+  width: 100%; padding: 18px; font-size: 18px; font-weight: 600;
+  border: none; border-radius: 16px; cursor: pointer;
+  color: white; background: var(--blue);
+  font-family: 'DM Sans', sans-serif;
+  transition: all .2s; letter-spacing: -.2px; margin-bottom: 16px;
+}
+.main-btn:active { transform: scale(.98); opacity: .85; }
+.main-btn:disabled { background: var(--card3); color: var(--muted); cursor: not-allowed; transform: none; }
+.main-btn.stop { background: var(--red); }
+.main-btn.saving { background: var(--card3); }
 
-        textarea { height: 80px; margin-top: 15px; color: #fff; }
-    </style>
+.notes-input {
+  width: 100%; min-height: 80px; padding: 14px 16px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; color: var(--text);
+  font-size: 15px; font-family: 'DM Sans', sans-serif;
+  resize: vertical; outline: none; transition: border-color .2s;
+}
+.notes-input::placeholder { color: var(--muted); }
+.notes-input:focus { border-color: var(--blue); }
+
+.history-bar {
+  background: var(--card); border-radius: 12px;
+  padding: 11px 14px; margin-top: 10px;
+  border: 1px solid var(--border);
+  font-size: 12px; color: var(--muted);
+  display: flex; align-items: center; gap: 8px; min-height: 42px;
+}
+.history-bar .hist-val { color: var(--text); font-weight: 600; font-family: 'DM Mono', monospace; }
+.history-bar .spinner { animation: spin .8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast {
+  position: fixed; bottom: calc(var(--safe-bottom) + 30px); left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--card2); color: var(--text);
+  padding: 12px 22px; border-radius: 30px;
+  font-size: 14px; font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+  opacity: 0; transition: all .3s; pointer-events: none;
+  white-space: nowrap; z-index: 999;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
 </head>
 <body>
 
-<div class="ios-card">
-    <h2>Tracker</h2>
-    
-    <div id="status">Checking Location...</div>
-
-    <label>Worker</label>
-    <select id="worker">
-        <option value="">Select Name</option>
-        <option value="BB">BB</option>
-        <option value="Harshu">Harshu</option>
-        <option value="Deepak">Deepak</option>
-    </select>
-
-    <label>Store</label>
-    <select id="store" onchange="updateTarget()">
-        <option value="Sobeys">Sobeys</option>
-        <option value="Walmart">Walmart</option>
-    </select>
-
-    <label>Old Dolly (Previous)</label>
-    <select id="oldDolly">
-        <option value="0">0</option>
-        <option value="0.25">0.25</option><option value="0.50">0.50</option><option value="0.75">0.75</option>
-        <option value="1">1</option><option value="1.25">1.25</option><option value="1.50">1.50</option><option value="1.75">1.75</option>
-        <option value="2">2</option><option value="2.25">2.25</option><option value="2.50">2.50</option><option value="2.75">2.75</option>
-        <option value="3">3</option><option value="3.25">3.25</option><option value="3.50">3.50</option><option value="3.75">3.75</option>
-        <option value="4">4</option><option value="5">5</option>
-    </select>
-
-    <label>New Dolly (Fresh)</label>
-    <select id="newDolly">
-        <option value="0">0</option>
-        <option value="0.25">0.25</option><option value="0.50">0.50</option><option value="0.75">0.75</option>
-        <option value="1">1</option><option value="1.25">1.25</option><option value="1.50">1.50</option><option value="1.75">1.75</option>
-        <option value="2">2</option><option value="2.25">2.25</option><option value="2.50">2.50</option><option value="2.75">2.75</option>
-        <option value="3">3</option><option value="3.25">3.25</option><option value="3.50">3.50</option><option value="3.75">3.75</option>
-        <option value="4">4</option><option value="5">5</option>
-    </select>
-
-    <div id="timer">00:00:00</div>
-    
-    <button id="startBtn" onclick="toggleTracking()" disabled>Start Tracking</button>
-    
-    <textarea id="notes" placeholder="Notes..."></textarea>
+<div class="app-header">
+  <div class="app-icon">🍞</div>
+  <div class="app-title">Bread Tracker</div>
+  <div class="app-sub" id="today-date"></div>
 </div>
 
+<div class="geo-bar checking" id="geo-bar">
+  <div class="geo-dot"></div>
+  <span class="geo-text" id="geo-text">Checking location…</span>
+  <span class="geo-dist" id="geo-dist"></span>
+</div>
+
+<div class="field-group">
+  <div class="field-label">Worker</div>
+  <div class="seg-ctrl" id="worker-ctrl">
+    <button class="seg-btn" onclick="selectWorker('BB')">BB</button>
+    <button class="seg-btn" onclick="selectWorker('Harshu')">Harshu</button>
+    <button class="seg-btn" onclick="selectWorker('Deepak')">Deepak</button>
+  </div>
+</div>
+
+<div class="field-group">
+  <div class="field-label">Store</div>
+  <div class="seg-ctrl" id="store-ctrl">
+    <button class="seg-btn on" onclick="selectStore('Sobeys')">🏪 Sobeys</button>
+    <button class="seg-btn" onclick="selectStore('Walmart')">🛒 Walmart</button>
+  </div>
+</div>
+
+<div class="field-group">
+  <div class="field-label">Dolly Counts</div>
+  <div class="dolly-grid">
+    <div class="dolly-box">
+      <div class="dolly-box-label">⏰ Left from Yesterday</div>
+      <div class="dolly-stepper">
+        <button class="dstep-btn" onclick="adjDolly('old',-1)">−</button>
+        <span class="dstep-val" id="old-val">0</span>
+        <button class="dstep-btn" onclick="adjDolly('old',1)">+</button>
+      </div>
+      <div class="dolly-sub" id="old-sub">dollies</div>
+    </div>
+    <div class="dolly-box">
+      <div class="dolly-box-label">🚛 Delivered Today</div>
+      <div class="dolly-stepper">
+        <button class="dstep-btn" onclick="adjDolly('new',-1)">−</button>
+        <span class="dstep-val" id="new-val">0</span>
+        <button class="dstep-btn" onclick="adjDolly('new',1)">+</button>
+      </div>
+      <div class="dolly-sub" id="new-sub">dollies</div>
+    </div>
+  </div>
+  <div class="total-row">
+    <span class="total-lbl">Total on shelf</span>
+    <span class="total-val" id="total-val">0</span>
+    <span class="sold-val" id="sold-val"></span>
+  </div>
+  <div class="history-bar">
+    <span>📋 Last recorded:</span>
+    <span class="hist-val" id="hist-val">Select worker &amp; store</span>
+  </div>
+</div>
+
+<div class="timer-card" id="timer-card">
+  <div class="timer-label">Merchandising Time</div>
+  <div class="timer-display" id="timer">00:00:00</div>
+  <div class="timer-start-info" id="timer-info"></div>
+</div>
+
+<button class="main-btn" id="main-btn" onclick="toggleTracking()" disabled>Start Tracking</button>
+
+<div class="field-group">
+  <div class="field-label">Notes</div>
+  <textarea class="notes-input" id="notes" placeholder="Add any notes here…"></textarea>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWBIFzFwoOPETXXdFSHtuyyBK5xfFSLqqN9teg7hmH3nAnq3VfznXl7BpaueVlwQNyGg/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzWBIFzFwoOPETXXdFSHtuyyBK5xfFSLqqN9teg7hmH3nAnq3VfznXl7BpaueVlwQNyGg/exec";
+const STEPS = [0,.25,.5,.75,1,1.25,1.5,1.75,2,2.25,2.5,2.75,3,3.25,3.5,3.75,4,5];
+const STORES = {
+  Sobeys:  { lat: 45.34379956415204, lng: -80.00785070506414 },
+  Walmart: { lat: 45.34725026580236, lng: -80.01192826729029 }
+};
+const RADIUS = 300;
 
-    let tLat = 45.34379956415204; 
-    let tLng = -80.00785070506414;
-    const ALLOWED_RADIUS = 300; 
+let worker = '', store = 'Sobeys';
+let oldDolly = 0, newDolly = 0, prevDolly = null;
+let isTracking = false, startTime = null, timerInterval = null;
+let geoOk = false;
 
-    function updateTarget() {
-        const s = document.getElementById('store').value;
-        tLat = (s === 'Walmart') ? 45.34725026580236 : 45.34379956415204;
-        tLng = (s === 'Walmart') ? -80.01192826729029 : -80.00785070506414;
-        checkLocation();    
-        fetchPastHistory(); 
-    }
+function selectWorker(w) {
+  worker = w;
+  document.querySelectorAll('#worker-ctrl .seg-btn').forEach(b => b.classList.toggle('on', b.textContent === w));
+  fetchHistory();
+}
+function selectStore(s) {
+  store = s;
+  document.querySelectorAll('#store-ctrl .seg-btn').forEach(b => b.classList.toggle('on', b.textContent.includes(s)));
+  checkLocation();
+  fetchHistory();
+}
 
-    function fetchPastHistory() {
-        const worker = document.getElementById('worker').value;
-        const store = document.getElementById('store').value;
-        if (!worker || !store) return;
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/plain' }, 
-            body: JSON.stringify({ action: "fetchLastCount", worker: worker, store: store })
-        })
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('oldDolly').value = data.lastCount; 
-        });
-    }
+function adjDolly(field, dir) {
+  if (field === 'old') {
+    const i = STEPS.findIndex(x => Math.abs(x - oldDolly) < .001);
+    oldDolly = STEPS[Math.max(0, Math.min(STEPS.length-1, (i<0?0:i)+dir))];
+  } else {
+    const i = STEPS.findIndex(x => Math.abs(x - newDolly) < .001);
+    newDolly = STEPS[Math.max(0, Math.min(STEPS.length-1, (i<0?0:i)+dir))];
+  }
+  renderDollies();
+}
+function fd(v) {
+  v = parseFloat(v.toFixed(2));
+  return Number.isInteger(v) ? String(v) : v.toFixed(2);
+}
+function renderDollies() {
+  document.getElementById('old-val').textContent = fd(oldDolly);
+  document.getElementById('new-val').textContent = fd(newDolly);
+  const tot = parseFloat((oldDolly + newDolly).toFixed(2));
+  document.getElementById('total-val').textContent = fd(tot) + ' dollies';
+  document.getElementById('old-sub').textContent = `~${Math.round(oldDolly*14)} trays`;
+  document.getElementById('new-sub').textContent = `~${Math.round(newDolly*14)} trays`;
+  if (prevDolly !== null) {
+    const sold = Math.max(0, parseFloat((prevDolly - oldDolly).toFixed(2)));
+    document.getElementById('sold-val').textContent = `↓ ${fd(sold)} sold`;
+  }
+}
 
-    document.getElementById('worker').addEventListener('change', fetchPastHistory);
+function fetchHistory() {
+  if (!worker || !store) return;
+  const hv = document.getElementById('hist-val');
+  hv.innerHTML = '<span class="spinner">⏳</span>';
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: "fetchLastCount", worker, store })
+  })
+  .then(r => r.json())
+  .then(data => {
+    prevDolly = parseFloat(data.lastCount) || 0;
+    hv.textContent = `${fd(prevDolly)} dollies (${worker} @ ${store})`;
+    const idx = STEPS.findIndex(x => Math.abs(x - prevDolly) < .001);
+    if (idx >= 0) { oldDolly = prevDolly; renderDollies(); }
+  })
+  .catch(() => { hv.textContent = 'Could not load history'; });
+}
 
-    function getDistance(lat1, lon1, lat2, lon2) {
-        const R = 6371e3; 
-        const a = Math.sin((lat2-lat1)*Math.PI/360)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin((lon2-lon1)*Math.PI/360)**2;
-        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    }
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371e3, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function checkLocation() {
+  const bar = document.getElementById('geo-bar');
+  const txt = document.getElementById('geo-text');
+  const dist = document.getElementById('geo-dist');
+  bar.className = 'geo-bar checking';
+  txt.textContent = 'Checking location…';
+  dist.textContent = '';
+  if (!navigator.geolocation) {
+    bar.className = 'geo-bar bad';
+    txt.textContent = 'GPS not available';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const d = Math.round(haversine(pos.coords.latitude, pos.coords.longitude, STORES[store].lat, STORES[store].lng));
+    geoOk = d <= RADIUS;
+    bar.className = 'geo-bar ' + (geoOk ? 'ok' : 'bad');
+    txt.textContent = geoOk ? `✓ On-site at ${store}` : `✗ Too far from ${store}`;
+    dist.textContent = d + 'm';
+    updateBtn();
+  }, () => {
+    bar.className = 'geo-bar bad';
+    txt.textContent = 'Location access denied';
+    updateBtn();
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+function updateBtn() {
+  const btn = document.getElementById('main-btn');
+  if (isTracking) return;
+  btn.disabled = !(geoOk && worker !== '');
+}
 
-    function checkLocation() {
-        navigator.geolocation.getCurrentPosition(p => {
-            const dist = getDistance(p.coords.latitude, p.coords.longitude, tLat, tLng);
-            const statusEl = document.getElementById('status');
-            const btn = document.getElementById('startBtn');
-            if (dist <= ALLOWED_RADIUS) {
-                statusEl.innerText = "✓ On-Site";
-                statusEl.style.color = "#32d74b"; // iOS Green
-                btn.disabled = false;
-            } else {
-                statusEl.innerText = "✗ Denied: " + Math.round(dist) + "m Away";
-                statusEl.style.color = "#ff453a"; // iOS Red
-                btn.disabled = true;
-            }
-        }, null, { enableHighAccuracy: true });
-    }
+function toggleTracking() {
+  if (!isTracking) {
+    if (!worker) { showToast('⚠️ Select a worker first'); return; }
+    isTracking = true;
+    startTime = new Date();
+    const btn = document.getElementById('main-btn');
+    btn.textContent = 'Stop & Save';
+    btn.classList.add('stop');
+    document.getElementById('timer-card').classList.add('running');
+    document.getElementById('timer-info').textContent = 'Started at ' + startTime.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    timerInterval = setInterval(tickTimer, 1000);
+  } else {
+    clearInterval(timerInterval);
+    submitData();
+  }
+}
+function tickTimer() {
+  const diff = new Date() - startTime;
+  const h = String(Math.floor(diff/3600000)).padStart(2,'0');
+  const m = String(Math.floor((diff%3600000)/60000)).padStart(2,'0');
+  const s = String(Math.floor((diff%60000)/1000)).padStart(2,'0');
+  document.getElementById('timer').textContent = `${h}:${m}:${s}`;
+}
 
-    let startTime, timerInterval, isTracking = false;
+function submitData() {
+  const btn = document.getElementById('main-btn');
+  btn.textContent = 'Saving…';
+  btn.classList.remove('stop');
+  btn.classList.add('saving');
+  btn.disabled = true;
+  const payload = {
+    action: "submitData",
+    sheetType: "employee",
+    date: startTime.toLocaleString(),
+    worker, store,
+    oldDolly: fd(oldDolly),
+    newDolly: fd(newDolly),
+    totalDolly: fd(parseFloat((oldDolly+newDolly).toFixed(2))),
+    duration: document.getElementById('timer').textContent,
+    notes: document.getElementById('notes').value
+  };
+  fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
+    .then(() => { showToast('✅ Saved successfully!'); setTimeout(() => location.reload(), 1800); })
+    .catch(() => { showToast('❌ Save failed — check connection'); btn.disabled = false; btn.textContent = 'Retry'; });
+}
 
-    function toggleTracking() {
-        const btn = document.getElementById('startBtn');
-        if (!isTracking) {
-            isTracking = true;
-            startTime = new Date();
-            btn.innerText = "Stop Tracking";
-            btn.style.backgroundColor = "#ff453a"; 
-            timerInterval = setInterval(() => {
-                const diff = new Date() - startTime;
-                const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
-                const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-                const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-                document.getElementById('timer').innerText = `${hrs}:${mins}:${secs}`;
-            }, 1000);
-        } else {
-            clearInterval(timerInterval);
-            submitData();
-        }
-    }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
 
-    function submitData() {
-        const btn = document.getElementById('startBtn');
-        btn.innerText = "Saving...";
-        btn.disabled = true;
-        const payload = {
-            action: "submitData",
-            sheetType: "employee",
-            date: startTime.toLocaleString(),
-            worker: document.getElementById('worker').value,
-            oldDolly: document.getElementById('oldDolly').value,
-            newDolly: document.getElementById('newDolly').value,
-            duration: document.getElementById('timer').innerText,
-            notes: `Store: ${document.getElementById('store').value}. ${document.getElementById('notes').value}`
-        };
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
-        .then(() => { alert("Saved!"); location.reload(); });
-    }
-
-    window.onload = checkLocation;
+document.getElementById('today-date').textContent = new Date().toLocaleDateString([], {weekday:'long', month:'long', day:'numeric'});
+renderDollies();
+checkLocation();
 </script>
 </body>
 </html>
