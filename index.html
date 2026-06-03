@@ -1,184 +1,224 @@
-// --- 1. GEOLOCATION & TARGET SETUP ---
-let tLat = 45.34379956415204;
-let tLng = -80.00785070506414;
-const ALLOWED_RADIUS = 300; 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bread Route Tracker</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 400px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        select, input, button, textarea { width: 100%; margin: 10px 0; padding: 12px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
+        button { background-color: #5cb85c; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #timer { font-size: 2em; font-weight: bold; margin: 20px 0; color: #333; }
+        #status { font-weight: bold; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
 
-function updateTarget() {
-    const s = document.getElementById('store').value;
-    tLat = (s === 'Walmart') ? 45.34725026580236 : 45.34379956415204;
-    tLng = (s === 'Walmart') ? -80.01192826729029 : -80.00785070506414;
+<div class="container">
+    <h2>Bread Route Tracker</h2>
     
-    checkLocation();    // Re-verify GPS distance
-    fetchPastHistory(); // Dynamically look up yesterday's stock number!
-}
+    <div id="status">Checking location...</div>
 
-// Auto-fetches the previous day's fresh inventory to pre-fill the Old Dolly input field
-function fetchPastHistory() {
-    const worker = document.getElementById('worker').value;
-    const store = document.getElementById('store').value;
-    const oldDollyInput = document.getElementById('oldDolly');
-    
-    if (!worker || !store) return; // Wait until they've selected both dropdowns
-    
-    oldDollyInput.placeholder = "Loading last count...";
-    oldDollyInput.disabled = true;
+    <label for="worker">Worker Name:</label>
+    <select id="worker">
+        <option value="">-- Select Name --</option>
+        <option value="Hardik">Hardik</option>
+        <option value="Associate 1">Associate 1</option>
+        <option value="Associate 2">Associate 2</option>
+    </select>
 
-    // Send a fetch payload to your Google Web App backend
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/plain' }, 
-        body: JSON.stringify({
-            action: "fetchLastCount",
-            worker: worker,
-            store: store
+    <label for="store">Target Store:</label>
+    <select id="store" onchange="updateTarget()">
+        <option value="Sobeys">Sobeys</option>
+        <option value="Walmart">Walmart</option>
+    </select>
+
+    <input type="number" id="oldDolly" placeholder="Old Dolly (Previous Day)">
+    <input type="number" id="newDolly" placeholder="New Dolly (Fresh Stock)">
+    
+    <div id="timer">00:00:00</div>
+    
+    <button id="startBtn" onclick="toggleTracking()" disabled>START TRACKING</button>
+    
+    <textarea id="notes" placeholder="Optional Notes..."></textarea>
+</div>
+
+<script>
+    // PASTE YOUR GOOGLE SCRIPT URL BELOW
+    const SCRIPT_URL = "YOUR_GOOGLE_WEB_APP_URL_HERE";
+
+    // --- 1. GEOLOCATION & TARGET SETUP ---
+    let tLat = 45.34379956415204; // Default Sobeys
+    let tLng = -80.00785070506414;
+    const ALLOWED_RADIUS = 300; 
+
+    function updateTarget() {
+        const s = document.getElementById('store').value;
+        tLat = (s === 'Walmart') ? 45.34725026580236 : 45.34379956415204;
+        tLng = (s === 'Walmart') ? -80.01192826729029 : -80.00785070506414;
+        
+        checkLocation();    
+        fetchPastHistory(); 
+    }
+
+    function fetchPastHistory() {
+        const worker = document.getElementById('worker').value;
+        const store = document.getElementById('store').value;
+        const oldDollyInput = document.getElementById('oldDolly');
+        
+        if (!worker || !store) return;
+        
+        oldDollyInput.placeholder = "Loading last count...";
+        oldDollyInput.disabled = true;
+
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/plain' }, 
+            body: JSON.stringify({
+                action: "fetchLastCount",
+                worker: worker,
+                store: store
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        oldDollyInput.value = data.lastCount; // Drop the count right into the input box!
-        oldDollyInput.disabled = false;
-    })
-    .catch(err => {
-        console.log("History lookup failed, defaulting to manual entry: ", err);
-        oldDollyInput.placeholder = "Enter Old Dolly";
-        oldDollyInput.disabled = false;
-    });
-}
-
-// Hook history lookup up to your worker name dropdown too
-document.getElementById('worker').addEventListener('change', fetchPastHistory);
-
-function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; 
-    const phi1 = lat1 * Math.PI / 180;
-    const phi2 = lat2 * Math.PI / 180;
-    const deltaPhi = (lat2 - lat1) * Math.PI / 180;
-    const deltaLambda = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-              Math.cos(phi1) * Math.cos(phi2) *
-              Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
-
-function checkLocation() {
-    if (!navigator.geolocation) {
-        document.getElementById('status').innerText = "GPS not supported by your browser.";
-        return;
+        .then(response => response.json())
+        .then(data => {
+            oldDollyInput.value = data.lastCount; 
+            oldDollyInput.disabled = false;
+        })
+        .catch(err => {
+            oldDollyInput.placeholder = "Enter Old Dolly";
+            oldDollyInput.disabled = false;
+        });
     }
-    
-    navigator.geolocation.getCurrentPosition(position => {
-        const uLat = position.coords.latitude;
-        const uLng = position.coords.longitude;
-        const dist = getDistance(uLat, uLng, tLat, tLng);
-        
-        const statusEl = document.getElementById('status');
-        const startBtn = document.getElementById('startBtn');
-        
-        if (dist <= ALLOWED_RADIUS) {
-            statusEl.innerText = "Location verified: You are on-site.";
-            statusEl.style.color = "green";
-            startBtn.disabled = false;
-        } else {
-            statusEl.innerText = `Access Denied: You are ${Math.round(dist)}m away from the store.`;
-            statusEl.style.color = "red";
-            startBtn.disabled = true;
+
+    document.getElementById('worker').addEventListener('change', fetchPastHistory);
+
+    function getDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; 
+        const phi1 = lat1 * Math.PI / 180;
+        const phi2 = lat2 * Math.PI / 180;
+        const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+        const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+                  Math.cos(phi1) * Math.cos(phi2) *
+                  Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    function checkLocation() {
+        if (!navigator.geolocation) {
+            document.getElementById('status').innerText = "GPS not supported.";
+            return;
         }
-    }, error => {
-        document.getElementById('status').innerText = "Error getting GPS location. Please allow location access.";
-        document.getElementById('status').style.color = "red";
-    }, { enableHighAccuracy: true });
-}
-
-// --- 2. TIMER & TRACKING SYSTEM ---
-let startTime, timerInterval;
-let isTracking = false;
-
-function toggleTracking() {
-    const startBtn = document.getElementById('startBtn');
-    const storeSel = document.getElementById('store');
-    const workerSel = document.getElementById('worker');
-    
-    if (!isTracking) {
-        isTracking = true;
-        startTime = new Date();
-        startBtn.innerText = "STOP TRACKING";
-        startBtn.style.backgroundColor = "#d9534f"; 
-        storeSel.disabled = true;
-        workerSel.disabled = true;
         
-        timerInterval = setInterval(updateTimerDisplay, 1000);
-    } else {
-        clearInterval(timerInterval);
-        submitData();
+        navigator.geolocation.getCurrentPosition(position => {
+            const uLat = position.coords.latitude;
+            const uLng = position.coords.longitude;
+            const dist = getDistance(uLat, uLng, tLat, tLng);
+            
+            const statusEl = document.getElementById('status');
+            const startBtn = document.getElementById('startBtn');
+            
+            if (dist <= ALLOWED_RADIUS) {
+                statusEl.innerText = "Location verified: You are on-site.";
+                statusEl.style.color = "green";
+                startBtn.disabled = false;
+            } else {
+                statusEl.innerText = `Access Denied: You are ${Math.round(dist)}m away from the store.`;
+                statusEl.style.color = "red";
+                startBtn.disabled = true;
+            }
+        }, error => {
+            document.getElementById('status').innerText = "Please allow GPS access.";
+            document.getElementById('status').style.color = "red";
+        }, { enableHighAccuracy: true });
     }
-}
 
-function updateTimerDisplay() {
-    const now = new Date();
-    const diff = now - startTime;
-    const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
-    const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-    const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-    document.getElementById('timer').innerText = `${hrs}:${mins}:${secs}`;
-}
+    // --- 2. TIMER & TRACKING SYSTEM ---
+    let startTime, timerInterval;
+    let isTracking = false;
 
-// --- 3. DATA SUBMISSION TO GOOGLE SHEETS ---
-function submitData() {
-    const startBtn = document.getElementById('startBtn');
-    startBtn.innerText = "Submitting...";
-    startBtn.disabled = true;
+    function toggleTracking() {
+        const startBtn = document.getElementById('startBtn');
+        if (!isTracking) {
+            isTracking = true;
+            startTime = new Date();
+            startBtn.innerText = "STOP TRACKING";
+            startBtn.style.backgroundColor = "#d9534f"; 
+            document.getElementById('store').disabled = true;
+            document.getElementById('worker').disabled = true;
+            timerInterval = setInterval(updateTimerDisplay, 1000);
+        } else {
+            clearInterval(timerInterval);
+            submitData();
+        }
+    }
 
-    const endTime = new Date();
-    const diff = endTime - startTime;
-    const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
-    const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-    const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-    const durationStr = `${hrs}:${mins}:${secs}`;
+    function updateTimerDisplay() {
+        const now = new Date();
+        const diff = now - startTime;
+        const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
+        const mins = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+        const secs = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+        document.getElementById('timer').innerText = `${hrs}:${mins}:${secs}`;
+    }
 
-    const payload = {
-        action: "submitData",
-        sheetType: "employee", // Forces this web app to ONLY submit to the Employee log tab
-        date: startTime.toLocaleString(),
-        worker: document.getElementById('worker').value,
-        oldDolly: document.getElementById('oldDolly').value || 0,
-        newDolly: document.getElementById('newDolly').value || 0,
-        duration: durationStr,
-        notes: `Store: ${document.getElementById('store').value}. ${document.getElementById('notes').value}`
-    };
+    function submitData() {
+        const startBtn = document.getElementById('startBtn');
+        startBtn.innerText = "Submitting...";
+        startBtn.disabled = true;
 
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(() => {
-        alert("Data successfully sent to your Google Sheet!");
-        resetForm();
-    })
-    .catch(err => {
-        alert("Error sending data: " + err);
-        resetForm();
-    });
-}
+        const endTime = new Date();
+        const diff = endTime - startTime;
+        const durationStr = document.getElementById('timer').innerText;
 
-function resetForm() {
-    clearInterval(timerInterval);
-    isTracking = false;
-    
-    const startBtn = document.getElementById('startBtn');
-    startBtn.innerText = "START TRACKING";
-    startBtn.style.backgroundColor = "#5cb85c"; 
-    
-    document.getElementById('store').disabled = false;
-    document.getElementById('worker').disabled = false;
-    document.getElementById('timer').innerText = "00:00:00";
-    document.getElementById('oldDolly').value = "";
-    document.getElementById('newDolly').value = "";
-    document.getElementById('notes').value = "";
-    
-    checkLocation();
-}
+        const payload = {
+            action: "submitData",
+            sheetType: "employee",
+            date: startTime.toLocaleString(),
+            worker: document.getElementById('worker').value,
+            oldDolly: document.getElementById('oldDolly').value || 0,
+            newDolly: document.getElementById('newDolly').value || 0,
+            duration: durationStr,
+            notes: `Store: ${document.getElementById('store').value}. ${document.getElementById('notes').value}`
+        };
 
-window.onload = checkLocation;
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(() => {
+            alert("Data Sent!");
+            resetForm();
+        })
+        .catch(err => {
+            alert("Error: " + err);
+            resetForm();
+        });
+    }
+
+    function resetForm() {
+        clearInterval(timerInterval);
+        isTracking = false;
+        const startBtn = document.getElementById('startBtn');
+        startBtn.innerText = "START TRACKING";
+        startBtn.style.backgroundColor = "#5cb85c"; 
+        document.getElementById('store').disabled = false;
+        document.getElementById('worker').disabled = false;
+        document.getElementById('timer').innerText = "00:00:00";
+        document.getElementById('oldDolly').value = "";
+        document.getElementById('newDolly').value = "";
+        document.getElementById('notes').value = "";
+        checkLocation();
+    }
+
+    window.onload = checkLocation;
+</script>
+
+</body>
+</html>
