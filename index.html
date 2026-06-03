@@ -2,50 +2,115 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bread Route Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bread Tracker</title>
     <style>
-        /* Classic High-Contrast Styling */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #2c3e50; color: #fff; text-align: center; padding: 15px; }
-        .app-card { max-width: 400px; margin: auto; background: #ecf0f1; padding: 25px; border-radius: 15px; color: #333; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        h2 { margin-top: 0; color: #2c3e50; border-bottom: 2px solid #bdc3c7; padding-bottom: 10px; }
-        
-        label { display: block; text-align: left; font-weight: bold; margin: 12px 0 5px 2px; font-size: 14px; }
-        select, input, textarea { width: 100%; padding: 14px; border-radius: 8px; border: 2px solid #bdc3c7; font-size: 16px; box-sizing: border-box; background: white; }
-        
-        #status { font-size: 15px; font-weight: bold; margin-bottom: 15px; padding: 10px; border-radius: 8px; background: #fff; border: 1px solid #ddd; }
-        #timer { font-size: 3rem; font-family: monospace; font-weight: bold; margin: 15px 0; color: #2c3e50; }
-        
-        /* Big Action Button */
-        #startBtn { width: 100%; padding: 20px; font-size: 1.2rem; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; color: white; transition: 0.3s; box-shadow: 0 4px 0 #27ae60; background-color: #2ecc71; }
-        #startBtn:active { transform: translateY(3px); box-shadow: none; }
-        #startBtn:disabled { background-color: #95a5a6; box-shadow: 0 4px 0 #7f8c8d; cursor: not-allowed; }
-        
-        textarea { margin-top: 15px; height: 80px; resize: none; }
+        /* Apple-Inspired iOS Design */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #000; /* Black background like Apple apps */
+            color: #fff; 
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .ios-card { 
+            width: 100%;
+            max-width: 375px; 
+            padding: 20px; 
+            background: #1c1c1e; /* Dark grey Apple card */
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        h2 { font-size: 24px; font-weight: 600; margin-bottom: 20px; text-align: center; color: #fff; }
+
+        label { 
+            display: block; 
+            font-size: 13px; 
+            text-transform: uppercase; 
+            color: #8e8e93; 
+            margin: 15px 0 5px 10px; 
+            font-weight: 500;
+        }
+
+        /* The Dropdowns - iOS will automatically use the "Scroll Wheel" for these */
+        select, textarea { 
+            width: 100%; 
+            padding: 15px; 
+            border-radius: 12px; 
+            border: none; 
+            font-size: 17px; 
+            background-color: #2c2c2e; 
+            color: #0a84ff; /* Apple Blue Text */
+            -webkit-appearance: none; /* Removes default arrow to look cleaner */
+            appearance: none;
+            box-sizing: border-box;
+        }
+
+        #status { 
+            font-size: 14px; 
+            margin-bottom: 20px; 
+            padding: 12px; 
+            border-radius: 10px; 
+            background: #2c2c2e; 
+            text-align: center;
+            font-weight: 500;
+        }
+
+        #timer { 
+            font-size: 48px; 
+            font-weight: 200; 
+            margin: 25px 0; 
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Apple Blue Action Button */
+        #startBtn { 
+            width: 100%; 
+            padding: 18px; 
+            font-size: 18px; 
+            font-weight: 600; 
+            border: none; 
+            border-radius: 14px; 
+            cursor: pointer; 
+            color: white; 
+            background-color: #007aff; /* Classic iOS Blue */
+            transition: all 0.2s ease;
+        }
+
+        #startBtn:active { transform: scale(0.98); opacity: 0.8; }
+        #startBtn:disabled { background-color: #3a3a3c; color: #8e8e93; cursor: not-allowed; }
+
+        textarea { height: 80px; margin-top: 15px; color: #fff; }
     </style>
 </head>
 <body>
 
-<div class="app-card">
-    <h2>ROUTE TRACKER</h2>
+<div class="ios-card">
+    <h2>Tracker</h2>
     
-    <div id="status">Checking GPS...</div>
+    <div id="status">Checking Location...</div>
 
-    <label>Worker:</label>
+    <label>Worker</label>
     <select id="worker">
-        <option value="">-- Select Name --</option>
+        <option value="">Select Name</option>
         <option value="BB">BB</option>
         <option value="Harshu">Harshu</option>
         <option value="Deepak">Deepak</option>
     </select>
 
-    <label>Store:</label>
+    <label>Store</label>
     <select id="store" onchange="updateTarget()">
         <option value="Sobeys">Sobeys</option>
         <option value="Walmart">Walmart</option>
     </select>
 
-    <label>Old Dolly (Previous):</label>
+    <label>Old Dolly (Previous)</label>
     <select id="oldDolly">
         <option value="0">0</option>
         <option value="0.25">0.25</option><option value="0.50">0.50</option><option value="0.75">0.75</option>
@@ -55,7 +120,7 @@
         <option value="4">4</option><option value="5">5</option>
     </select>
 
-    <label>New Dolly (Fresh):</label>
+    <label>New Dolly (Fresh)</label>
     <select id="newDolly">
         <option value="0">0</option>
         <option value="0.25">0.25</option><option value="0.50">0.50</option><option value="0.75">0.75</option>
@@ -67,9 +132,9 @@
 
     <div id="timer">00:00:00</div>
     
-    <button id="startBtn" onclick="toggleTracking()" disabled>START TRACKING</button>
+    <button id="startBtn" onclick="toggleTracking()" disabled>Start Tracking</button>
     
-    <textarea id="notes" placeholder="Any notes for today?"></textarea>
+    <textarea id="notes" placeholder="Notes..."></textarea>
 </div>
 
 <script>
@@ -91,7 +156,6 @@
         const worker = document.getElementById('worker').value;
         const store = document.getElementById('store').value;
         if (!worker || !store) return;
-        
         fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/plain' }, 
@@ -117,12 +181,12 @@
             const statusEl = document.getElementById('status');
             const btn = document.getElementById('startBtn');
             if (dist <= ALLOWED_RADIUS) {
-                statusEl.innerText = "✓ ON-SITE VERIFIED";
-                statusEl.style.color = "green";
+                statusEl.innerText = "✓ On-Site";
+                statusEl.style.color = "#32d74b"; // iOS Green
                 btn.disabled = false;
             } else {
-                statusEl.innerText = "✗ DENIED: " + Math.round(dist) + "m AWAY";
-                statusEl.style.color = "red";
+                statusEl.innerText = "✗ Denied: " + Math.round(dist) + "m Away";
+                statusEl.style.color = "#ff453a"; // iOS Red
                 btn.disabled = true;
             }
         }, null, { enableHighAccuracy: true });
@@ -135,9 +199,8 @@
         if (!isTracking) {
             isTracking = true;
             startTime = new Date();
-            btn.innerText = "STOP TRACKING";
-            btn.style.backgroundColor = "#e74c3c"; 
-            btn.style.boxShadow = "0 4px 0 #c0392b";
+            btn.innerText = "Stop Tracking";
+            btn.style.backgroundColor = "#ff453a"; 
             timerInterval = setInterval(() => {
                 const diff = new Date() - startTime;
                 const hrs = String(Math.floor(diff / 3600000)).padStart(2, '0');
@@ -153,9 +216,8 @@
 
     function submitData() {
         const btn = document.getElementById('startBtn');
-        btn.innerText = "SENDING...";
+        btn.innerText = "Saving...";
         btn.disabled = true;
-
         const payload = {
             action: "submitData",
             sheetType: "employee",
@@ -166,9 +228,8 @@
             duration: document.getElementById('timer').innerText,
             notes: `Store: ${document.getElementById('store').value}. ${document.getElementById('notes').value}`
         };
-
         fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
-        .then(() => { alert("Shift Data Saved!"); location.reload(); });
+        .then(() => { alert("Saved!"); location.reload(); });
     }
 
     window.onload = checkLocation;
